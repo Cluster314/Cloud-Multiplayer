@@ -155,7 +155,7 @@
 
     #errorMsg { color: #ff4949; font-size: 0.85rem; text-align: center; }
 
-    /* Header Controls */
+    /* Top Navigation Header */
     header {
       position: relative;
       z-index: 1;
@@ -242,7 +242,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 18px;
+      gap: 24px;
       padding: 20px;
     }
 
@@ -252,10 +252,8 @@
       border-radius: 50%;
       border: 8px solid rgba(255, 255, 255, 0.15);
       color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 900;
       cursor: pointer;
       box-shadow: 0 0 50px var(--glow-color);
       transition: transform 0.05s ease, box-shadow 0.2s ease, background-color 0.2s ease;
@@ -268,23 +266,6 @@
       transform: scale(0.93);
     }
 
-    #clickCountText {
-      font-size: 2.6rem;
-      font-weight: 900;
-      line-height: 1;
-    }
-
-    .cps-badge {
-      margin-top: 6px;
-      font-size: 0.85rem;
-      font-weight: 800;
-      letter-spacing: 1px;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 4px 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
     .click-hint {
       font-size: 0.8rem;
       font-weight: 800;
@@ -294,7 +275,7 @@
 
     /* Leaderboard Sidebar */
     .leaderboard-section {
-      width: 360px;
+      width: 340px;
       background: var(--panel-bg);
       border-left: 1px solid var(--panel-border);
       backdrop-filter: blur(12px);
@@ -353,20 +334,8 @@
       width: 20px;
     }
 
-    .leaderboard-item .stats-col {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-    }
-
     .leaderboard-item .score {
       font-weight: 800;
-    }
-
-    .leaderboard-item .cps-subtext {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: #ffca28;
     }
 
     .my-rank-banner {
@@ -421,10 +390,7 @@
 
   <div class="game-container">
     <div class="click-section">
-      <button id="clickBtn">
-        <span id="clickCountText">0</span>
-        <span class="cps-badge"><span id="liveCpsText">0.0</span> CPS</span>
-      </button>
+      <button id="clickBtn">0</button>
       <span class="click-hint">CLICK TO SCORE</span>
     </div>
 
@@ -463,13 +429,8 @@
     const localPlayer = {
       color: "#4CAF50",
       clicks: 0,
-      cps: 0,
-      maxCps: 0,
       name: "Player"
     };
-
-    // CPS Tracking variables
-    let clickTimestamps = [];
 
     const authOverlay = document.getElementById('authOverlay');
     const emailInput = document.getElementById('emailInput');
@@ -480,8 +441,6 @@
     const errorMsg = document.getElementById('errorMsg');
     
     const clickBtn = document.getElementById('clickBtn');
-    const clickCountText = document.getElementById('clickCountText');
-    const liveCpsText = document.getElementById('liveCpsText');
     const liveColorPicker = document.getElementById('liveColorPicker');
     const leaderboardList = document.getElementById('leaderboardList');
     const myRankDisplay = document.getElementById('myRankDisplay');
@@ -527,8 +486,7 @@
         await set(ref(database, 'users/' + uid), {
           name: name,
           color: initialColor,
-          clicks: 0,
-          cps: 0
+          clicks: 0
         });
       } catch (err) {
         errorMsg.innerText = err.message.replace("Firebase: ", "");
@@ -560,7 +518,6 @@
           localPlayer.name = profile.name || "Player";
           localPlayer.color = profile.color || "#4CAF50";
           localPlayer.clicks = profile.clicks || 0;
-          localPlayer.maxCps = profile.cps || 0;
         }
 
         authOverlay.style.display = 'none';
@@ -568,7 +525,7 @@
         liveColorPicker.value = localPlayer.color;
         clickBtn.style.backgroundColor = localPlayer.color;
         document.documentElement.style.setProperty('--glow-color', `${localPlayer.color}66`);
-        clickCountText.innerText = localPlayer.clicks;
+        clickBtn.innerText = localPlayer.clicks;
       }
     });
 
@@ -580,8 +537,7 @@
         id: id,
         name: users[id].name || "Player",
         color: users[id].color || "#4CAF50",
-        clicks: users[id].clicks || 0,
-        cps: users[id].cps || 0
+        clicks: users[id].clicks || 0
       })).sort((a, b) => b.clicks - a.clicks);
 
       leaderboardList.innerHTML = "";
@@ -601,10 +557,7 @@
             <span class="color-dot" style="background-color: ${player.color}"></span>
             <span>${player.name}</span>
           </div>
-          <div class="stats-col">
-            <span class="score">${player.clicks}</span>
-            <span class="cps-subtext">${player.cps} CPS</span>
-          </div>
+          <span class="score">${player.clicks}</span>
         `;
         leaderboardList.appendChild(li);
       });
@@ -620,35 +573,14 @@
       }
     });
 
-    // Calculate CPS every 100ms
-    setInterval(() => {
-      const now = Date.now();
-      // Keep only clicks from the last 1000ms (1 second)
-      clickTimestamps = clickTimestamps.filter(timestamp => now - timestamp <= 1000);
-      
-      const currentCps = clickTimestamps.length;
-      localPlayer.cps = currentCps;
-      liveCpsText.innerText = currentCps;
-
-      // Update peak CPS record to Firebase if a new record is hit
-      if (currentCps > localPlayer.maxCps && userProfileRef) {
-        localPlayer.maxCps = currentCps;
-        update(userProfileRef, { cps: currentCps });
-      }
-    }, 100);
-
     // Handle Click
     clickBtn.addEventListener('click', () => {
       if (!currentUser || !userProfileRef) return;
 
-      clickTimestamps.push(Date.now());
       localPlayer.clicks++;
-      clickCountText.innerText = localPlayer.clicks;
+      clickBtn.innerText = localPlayer.clicks;
 
-      update(userProfileRef, { 
-        clicks: localPlayer.clicks,
-        cps: Math.max(localPlayer.cps, localPlayer.maxCps)
-      });
+      update(userProfileRef, { clicks: localPlayer.clicks });
     });
   </script>
 </body>
