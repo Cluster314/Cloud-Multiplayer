@@ -4,76 +4,214 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Firebase Realtime Multiplayer Clicker</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background-color: #1a1a1a; color: #fff; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
-    #authOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
-    .auth-box { background: #2a2a2a; padding: 30px; border-radius: 8px; border: 1px solid #444; display: flex; flex-direction: column; gap: 10px; width: 320px; text-align: center; }
-    .auth-box label { font-size: 0.85rem; text-align: left; color: #ccc; }
-    .auth-box input[type="text"], .auth-box input[type="email"], .auth-box input[type="password"] { padding: 10px; border-radius: 4px; border: 1px solid #555; background: #111; color: #fff; font-size: 1rem; }
-    .color-picker-row { display: flex; align-items: center; gap: 10px; }
-    .auth-box input[type="color"] { border: none; width: 40px; height: 40px; border-radius: 4px; cursor: pointer; background: none; }
-    .auth-box button { padding: 10px; border-radius: 4px; border: none; background: #4CAF50; color: white; font-weight: bold; cursor: pointer; font-size: 1rem; margin-top: 5px; }
-    .auth-box button.sec { background: #333; border: 1px solid #555; }
-    .auth-box button:hover { opacity: 0.9; }
-    #errorMsg { color: #ff5555; font-size: 0.85rem; }
+    :root {
+      --bg-color: #000000;
+      --panel-bg: #0d0d0d;
+      --panel-border: #222222;
+      --text-color: #ffffff;
+      --subtext-color: #888888;
+      --item-border: #1a1a1a;
+      --btn-hover: #1f1f1f;
+    }
 
-    /* New Layout Styles */
-    .game-container {
+    [data-theme="light"] {
+      --bg-color: #f4f5f7;
+      --panel-bg: #ffffff;
+      --panel-border: #e1e4e8;
+      --text-color: #000000;
+      --subtext-color: #666666;
+      --item-border: #f0f0f0;
+      --btn-hover: #eaeaea;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
       display: flex;
-      flex-direction: row;
-      gap: 20px;
-      align-items: stretch;
+      flex-direction: column;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* Auth Modal */
+    #authOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
       justify-content: center;
-      width: 700px;
-      height: 400px;
-      margin-top: 15px;
+      z-index: 100;
+    }
+
+    .auth-box {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      padding: 32px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 340px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+
+    .auth-box label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--subtext-color);
+    }
+
+    .auth-box input[type="text"], 
+    .auth-box input[type="email"], 
+    .auth-box input[type="password"] {
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--panel-border);
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .color-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .auth-box input[type="color"] {
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: none;
+    }
+
+    .auth-box button {
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      background: #4CAF50;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.95rem;
+      margin-top: 6px;
+      transition: opacity 0.2s;
+    }
+
+    .auth-box button.sec {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--text-color);
+    }
+
+    .auth-box button:hover { opacity: 0.85; }
+    #errorMsg { color: #ff4949; font-size: 0.85rem; text-align: center; }
+
+    /* Top Navigation Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--panel-border);
+      background: var(--panel-bg);
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .theme-toggle-btn {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--text-color);
+      padding: 8px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .theme-toggle-btn:hover {
+      background: var(--btn-hover);
+    }
+
+    /* Edge-To-Edge Main Layout */
+    .game-container {
+      flex: 1;
+      display: flex;
+      width: 100vw;
     }
 
     .click-section {
       flex: 1;
-      background: #222;
-      border: 2px solid #444;
-      border-radius: 8px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 15px;
+      gap: 20px;
+      padding: 20px;
     }
 
     #clickBtn {
-      width: 140px;
-      height: 140px;
+      width: 220px;
+      height: 220px;
       border-radius: 50%;
-      border: 4px solid #fff;
+      border: 6px solid var(--panel-bg);
       color: #fff;
-      font-size: 1.5rem;
-      font-weight: bold;
+      font-size: 2.2rem;
+      font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      box-shadow: 0 0 40px rgba(0,0,0,0.6);
       transition: transform 0.05s ease;
-    }
-    #clickBtn:active {
-      transform: scale(0.92);
+      outline: none;
+      user-select: none;
     }
 
+    #clickBtn:active {
+      transform: scale(0.94);
+    }
+
+    .click-hint {
+      font-size: 0.85rem;
+      color: var(--subtext-color);
+      letter-spacing: 0.5px;
+    }
+
+    /* Full-Height Right Sidebar */
     .leaderboard-section {
-      width: 280px;
-      background: #222;
-      border: 2px solid #444;
-      border-radius: 8px;
-      padding: 15px;
+      width: 320px;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--panel-border);
       display: flex;
       flex-direction: column;
+      padding: 20px;
     }
 
     .leaderboard-section h2 {
-      font-size: 1.1rem;
-      border-bottom: 1px solid #444;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
-      text-align: center;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--subtext-color);
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
     }
 
     .leaderboard-list {
@@ -85,25 +223,38 @@
     .leaderboard-item {
       display: flex;
       justify-content: space-between;
-      padding: 6px 8px;
-      font-size: 0.85rem;
-      border-bottom: 1px solid #333;
+      align-items: center;
+      padding: 10px 8px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--item-border);
+    }
+
+    .leaderboard-item .rank {
+      font-weight: bold;
+      color: var(--subtext-color);
+      margin-right: 8px;
+      width: 24px;
+      display: inline-block;
+    }
+
+    .leaderboard-item .score {
+      font-weight: 700;
     }
 
     .my-rank-banner {
-      margin-top: 10px;
-      padding: 8px;
-      background: #333;
-      border: 1px dashed #666;
-      border-radius: 4px;
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--bg-color);
+      border: 1px dashed var(--panel-border);
+      border-radius: 6px;
       text-align: center;
       font-size: 0.85rem;
-      font-weight: bold;
+      font-weight: 700;
       color: #ffca28;
     }
   </style>
 </head>
-<body>
+<body data-theme="dark">
 
   <div id="authOverlay">
     <div class="auth-box">
@@ -122,7 +273,7 @@
       <label>Avatar Color</label>
       <div class="color-picker-row">
         <input type="color" id="colorInput" value="#4CAF50" />
-        <span style="font-size: 0.8rem; color: #aaa;">Pick color</span>
+        <span style="font-size: 0.8rem; color: var(--subtext-color);">Pick color</span>
       </div>
 
       <button id="loginBtn">Log In</button>
@@ -130,12 +281,15 @@
     </div>
   </div>
 
-  <h1>Multiplayer Clicker</h1>
+  <header>
+    <h1>Multiplayer Clicker</h1>
+    <button id="themeToggle" class="theme-toggle-btn">Theme: OLED Dark</button>
+  </header>
 
   <div class="game-container">
     <div class="click-section">
       <button id="clickBtn">0</button>
-      <span style="font-size:0.85rem; color:#aaa;">Click to score!</span>
+      <span class="click-hint">CLICK TO SCORE</span>
     </div>
 
     <div class="leaderboard-section">
@@ -188,6 +342,19 @@
     const clickBtn = document.getElementById('clickBtn');
     const leaderboardList = document.getElementById('leaderboardList');
     const myRankDisplay = document.getElementById('myRankDisplay');
+
+    // Theme Toggle Logic
+    const themeToggleBtn = document.getElementById('themeToggle');
+    themeToggleBtn.addEventListener('click', () => {
+      const currentTheme = document.body.getAttribute('data-theme');
+      if (currentTheme === 'dark') {
+        document.body.setAttribute('data-theme', 'light');
+        themeToggleBtn.innerText = 'Theme: Light';
+      } else {
+        document.body.setAttribute('data-theme', 'dark');
+        themeToggleBtn.innerText = 'Theme: OLED Dark';
+      }
+    });
 
     // Register User
     signupBtn.addEventListener('click', async () => {
@@ -244,18 +411,16 @@
       }
     });
 
-    // Global listener for ALL accounts (online & offline)
+    // Global listener for ALL accounts
     onValue(allUsersRef, (snapshot) => {
       const users = snapshot.val() || {};
       
-      // Convert to array and sort descending by click count
       const sortedUsers = Object.keys(users).map(id => ({
         id: id,
         name: users[id].name || "Player",
         clicks: users[id].clicks || 0
       })).sort((a, b) => b.clicks - a.clicks);
 
-      // Render Top 10
       leaderboardList.innerHTML = "";
       const top10 = sortedUsers.slice(0, 10);
       let inTop10 = false;
@@ -268,13 +433,12 @@
         const li = document.createElement('li');
         li.className = 'leaderboard-item';
         li.innerHTML = `
-          <span><b>#${index + 1}</b> ${player.name}</span>
-          <span><b>${player.clicks}</b></span>
+          <span><span class="rank">#${index + 1}</span> ${player.name}</span>
+          <span class="score">${player.clicks}</span>
         `;
         leaderboardList.appendChild(li);
       });
 
-      // Show personal rank banner if outside top 10
       if (currentUser && !inTop10) {
         const myRankIndex = sortedUsers.findIndex(player => player.id === currentUser.uid);
         if (myRankIndex !== -1) {
@@ -293,7 +457,6 @@
       localPlayer.clicks++;
       clickBtn.innerText = localPlayer.clicks;
 
-      // Update total clicks in global users database
       update(userProfileRef, { clicks: localPlayer.clicks });
     });
   </script>
