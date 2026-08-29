@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Realtime Multiplayer Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #1a1a1a;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    
+    #loginOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .login-box {
+      background: #2a2a2a;
+      padding: 30px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 320px;
+      text-align: center;
+    }
+    .login-box label {
+      font-size: 0.85rem;
+      text-align: left;
+      color: #ccc;
+    }
+    .login-box input[type="text"] {
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #111;
+      color: #fff;
+      font-size: 1rem;
+    }
+    .color-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .login-box input[type="color"] {
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+    }
+    .login-box input[type="file"] {
+      font-size: 0.85rem;
+    }
+    .login-box button {
+      padding: 10px;
+      border-radius: 4px;
+      border: none;
+      background: #4CAF50;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-top: 5px;
+    }
+    .login-box button:hover {
+      background: #45a049;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 1.2rem;
+    }
+    canvas {
+      border: 2px solid #444;
+      background-color: #000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Join Game Screen -->
+  <div id="loginOverlay">
+    <div class="login-box">
+      <h2>Join Game</h2>
+      
+      <label for="usernameInput">Username</label>
+      <input type="text" id="usernameInput" placeholder="Enter Username" maxlength="12" autofocus />
+
+      <label>Avatar Color</label>
+      <div class="color-picker-row">
+        <input type="color" id="colorInput" value="#4CAF50" />
+        <span style="font-size: 0.8rem; color: #aaa;">Pick color</span>
+      </div>
+
+      <label for="imageInput">Or Upload Image Avatar</label>
+      <input type="file" id="imageInput" accept="image/*" />
+
+      <button id="joinBtn">Play</button>
+    </div>
+  </div>
+
+  <h1>Use WASD or Arrow Keys to Move</h1>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, onDisconnect } 
+      from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDA3gMEnbJLyRJh5Y-aIgj_fwgLI_44D4k",
+      authDomain: "cluster-multiplayer.firebaseapp.com",
+      databaseURL: "https://cluster-multiplayer-default-rtdb.firebaseio.com",
+      projectId: "cluster-multiplayer",
+      storageBucket: "cluster-multiplayer.firebasestorage.app",
+      messagingSenderId: "752922691624",
+      appId: "1:752922691624:web:7e4a3abf799d7d66f3cd1d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const playerId = 'player_' + Math.random().toString(36).substring(2, 9);
+    const playerRef = ref(database, 'players/' + playerId);
+    const allPlayersRef = ref(database, 'players');
+
+    const localPlayer = {
+      x: Math.random() * (canvas.width - 40) + 20,
+      y: Math.random() * (canvas.height - 40) + 20,
+      color: "#4CAF50",
+      imageUrl: null,
+      speed: 4,
+      name: "Player"
+    };
+
+    let allPlayers = {};
+    const imageCache = {}; // Caches HTML Image elements for remote players
+    const keys = {};
+    let isPlaying = false;
+
+    // UI elements
+    const loginOverlay = document.getElementById('loginOverlay');
+    const usernameInput = document.getElementById('usernameInput');
+    const colorInput = document.getElementById('colorInput');
+    const imageInput = document.getElementById('imageInput');
+    const joinBtn = document.getElementById('joinBtn');
+
+    // Convert local uploaded image file to DataURL
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          localPlayer.imageUrl = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    function joinGame() {
+      const enteredName = usernameInput.value.trim();
+      if (enteredName !== "") {
+        localPlayer.name = enteredName;
+      }
+
+      localPlayer.color = colorInput.value;
+      
+      loginOverlay.style.display = 'none';
+      isPlaying = true;
+
+      onDisconnect(playerRef).remove();
+
+      set(playerRef, {
+        x: localPlayer.x,
+        y: localPlayer.y,
+        color: localPlayer.color,
+        imageUrl: localPlayer.imageUrl,
+        name: localPlayer.name
+      });
+    }
+
+    joinBtn.addEventListener('click', joinGame);
+
+    onValue(allPlayersRef, (snapshot) => {
+      allPlayers = snapshot.val() || {};
+
+      // Preload images into HTML Image elements so canvas can render them immediately
+      for (const id in allPlayers) {
+        const p = allPlayers[id];
+        if (p.imageUrl && !imageCache[id]) {
+          const img = new Image();
+          img.src = p.imageUrl;
+          imageCache[id] = img;
+        }
+      }
+    });
+
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+    function update() {
+      if (!isPlaying) return;
+
+      let moved = false;
+
+      if (keys['ArrowUp'] || keys['w']) { localPlayer.y -= localPlayer.speed; moved = true; }
+      if (keys['ArrowDown'] || keys['s']) { localPlayer.y += localPlayer.speed; moved = true; }
+      if (keys['ArrowLeft'] || keys['a']) { localPlayer.x -= localPlayer.speed; moved = true; }
+      if (keys['ArrowRight'] || keys['d']) { localPlayer.x += localPlayer.speed; moved = true; }
+
+      localPlayer.x = Math.max(20, Math.min(canvas.width - 20, localPlayer.x));
+      localPlayer.y = Math.max(20, Math.min(canvas.height - 20, localPlayer.y));
+
+      if (moved) {
+        set(playerRef, {
+          x: localPlayer.x,
+          y: localPlayer.y,
+          color: localPlayer.color,
+          imageUrl: localPlayer.imageUrl,
+          name: localPlayer.name
+        });
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (const id in allPlayers) {
+        const p = allPlayers[id];
+        const radius = 20;
+
+        // Render uploaded image if available, otherwise draw colored circle
+        if (p.imageUrl && imageCache[id] && imageCache[id].complete) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.drawImage(imageCache[id], p.x - radius, p.y - radius, radius * 2, radius * 2);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = p.color || '#4CAF50';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Username
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(p.name || "Player", p.x, p.y - 26);
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
