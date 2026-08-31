@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Firebase Realtime Multiplayer Clicker</title>
+  <title>Cluster Cloud Multiplayer Clicker</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <style>
     :root {
@@ -41,7 +41,6 @@
       transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    /* Ambient Background Glows */
     .ambient-bg {
       position: fixed;
       top: 0;
@@ -69,7 +68,6 @@
       100% { transform: translate(60px, 40px) scale(1.1); }
     }
 
-    /* Auth Modal */
     #authOverlay {
       position: fixed;
       top: 0;
@@ -165,16 +163,8 @@
       box-shadow: none;
     }
 
-    .auth-box button.danger {
-      background: rgba(255, 73, 73, 0.15);
-      border: 1px solid rgba(255, 73, 73, 0.4);
-      color: #ff4949;
-      box-shadow: none;
-    }
+    #errorMsg { color: #ff4949; font-size: 0.85rem; text-align: center; min-height: 18px; }
 
-    #errorMsg { color: #ff4949; font-size: 0.85rem; text-align: center; }
-
-    /* Top Navigation Header */
     header {
       position: relative;
       z-index: 1;
@@ -269,7 +259,6 @@
       font-weight: 700;
     }
 
-    /* Edge-To-Edge Main Layout */
     .game-container {
       position: relative;
       z-index: 1;
@@ -278,7 +267,6 @@
       width: 100vw;
     }
 
-    /* Home Hero Page */
     #homeSection {
       flex: 1;
       display: flex;
@@ -321,7 +309,6 @@
       box-shadow: 0 12px 30px rgba(76, 175, 80, 0.5);
     }
 
-    /* Clicker Game View */
     .click-section {
       flex: 1;
       display: flex;
@@ -359,7 +346,6 @@
       color: var(--subtext-color);
     }
 
-    /* Leaderboard Sidebar */
     .leaderboard-section {
       width: 340px;
       background: var(--panel-bg);
@@ -456,13 +442,13 @@
         <label for="passwordInput">Password</label>
         <input type="password" id="passwordInput" placeholder="••••••••" />
 
-        <label for="usernameInput">Username</label>
+        <label for="usernameInput">Username (For Sign Up)</label>
         <input type="text" id="usernameInput" placeholder="Player Name" maxlength="12" />
 
-        <button id="loginBtn">Log In</button>
-        <button id="signupBtn" class="sec">Sign Up</button>
+        <button type="button" id="loginBtn">Log In</button>
+        <button type="button" id="signupBtn" class="sec">Sign Up</button>
         
-        <button id="googleBtn" class="sec" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <button type="button" id="googleBtn" class="sec" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -474,16 +460,13 @@
       </div>
 
       <div id="googleSetupForm" style="display: none; flex-direction: column; gap: 14px;">
-        <h2>Complete Profile</h2>
-        <p style="font-size: 0.85rem; color: var(--subtext-color); text-align: center;">Finish setting up your account password and player username.</p>
+        <h2>Choose Username</h2>
+        <p style="font-size: 0.85rem; color: var(--subtext-color); text-align: center;">Set your display name to start playing.</p>
         
-        <label for="googleUsernameInput">Choose Username</label>
+        <label for="googleUsernameInput">Player Username</label>
         <input type="text" id="googleUsernameInput" placeholder="Player Name" maxlength="12" />
 
-        <label for="googlePasswordInput">Set Account Password</label>
-        <input type="password" id="googlePasswordInput" placeholder="••••••••" />
-
-        <button id="finishGoogleSignupBtn">Complete Sign Up</button>
+        <button type="button" id="finishGoogleSignupBtn">Start Playing</button>
       </div>
     </div>
   </div>
@@ -533,9 +516,7 @@
       signOut,
       deleteUser,
       GoogleAuthProvider,
-      signInWithPopup,
-      EmailAuthProvider,
-      linkWithCredential
+      signInWithPopup
     } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getDatabase, ref, set, update, get, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
@@ -575,7 +556,6 @@
     const passwordInput = document.getElementById('passwordInput');
     const usernameInput = document.getElementById('usernameInput');
     const googleUsernameInput = document.getElementById('googleUsernameInput');
-    const googlePasswordInput = document.getElementById('googlePasswordInput');
     
     const loginBtn = document.getElementById('loginBtn');
     const signupBtn = document.getElementById('signupBtn');
@@ -596,7 +576,6 @@
     const leaderboardList = document.getElementById('leaderboardList');
     const myRankDisplay = document.getElementById('myRankDisplay');
 
-    // UI View Controllers
     function showAuthModal() {
       standardAuthForm.style.display = 'flex';
       googleSetupForm.style.display = 'none';
@@ -612,7 +591,6 @@
     headerAuthBtn.addEventListener('click', showAuthModal);
     homePlayBtn.addEventListener('click', showAuthModal);
 
-    // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('themeToggle');
     themeToggleBtn.addEventListener('click', () => {
       const currentTheme = document.body.getAttribute('data-theme');
@@ -625,7 +603,6 @@
       }
     });
 
-    // Dynamic Color Change Listener
     liveColorPicker.addEventListener('input', (e) => {
       const newColor = e.target.value;
       localPlayer.color = newColor;
@@ -638,12 +615,17 @@
       }
     });
 
-    // Register Email User
+    // Create Account
     signupBtn.addEventListener('click', async () => {
       const email = emailInput.value.trim();
       const password = passwordInput.value;
       const name = usernameInput.value.trim() || "Player";
       const initialColor = liveColorPicker.value;
+
+      if (!email || !password) {
+        errorMsg.innerText = "Please enter an email and password.";
+        return;
+      }
 
       try {
         errorMsg.innerText = "";
@@ -660,10 +642,15 @@
       }
     });
 
-    // Log In Email User
+    // Log In
     loginBtn.addEventListener('click', async () => {
       const email = emailInput.value.trim();
       const password = passwordInput.value;
+
+      if (!email || !password) {
+        errorMsg.innerText = "Please enter your email and password.";
+        return;
+      }
 
       try {
         errorMsg.innerText = "";
@@ -673,7 +660,7 @@
       }
     });
 
-    // Google Sign-In Step 1: Detect if first-time user
+    // Google Sign-In
     const provider = new GoogleAuthProvider();
     googleBtn.addEventListener('click', async () => {
       try {
@@ -685,34 +672,24 @@
         const snapshot = await get(userRef);
         
         if (!snapshot.exists()) {
-          // Require setup step for Username & Password
           pendingGoogleUser = user;
           standardAuthForm.style.display = 'none';
           googleSetupForm.style.display = 'flex';
+        } else {
+          hideAuthModal();
         }
       } catch (err) {
         errorMsg.innerText = err.message.replace("Firebase: ", "");
       }
     });
 
-    // Google Sign-In Step 2: Set Username & Password
+    // Finish Google Setup
     finishGoogleSignupBtn.addEventListener('click', async () => {
       const chosenUsername = googleUsernameInput.value.trim() || "Player";
-      const chosenPassword = googlePasswordInput.value;
-
-      if (!chosenPassword || chosenPassword.length < 6) {
-        errorMsg.innerText = "Password must be at least 6 characters long.";
-        return;
-      }
 
       try {
         errorMsg.innerText = "";
-        if (pendingGoogleUser && pendingGoogleUser.email) {
-          // Link password credential to Google account
-          const credential = EmailAuthProvider.credential(pendingGoogleUser.email, chosenPassword);
-          await linkWithCredential(pendingGoogleUser, credential);
-
-          // Save profile in database
+        if (pendingGoogleUser) {
           await set(ref(database, 'users/' + pendingGoogleUser.uid), {
             name: chosenUsername,
             color: liveColorPicker.value || "#4CAF50",
@@ -721,32 +698,31 @@
 
           pendingGoogleUser = null;
           hideAuthModal();
+          location.reload();
         }
       } catch (err) {
         errorMsg.innerText = err.message.replace("Firebase: ", "");
       }
     });
 
-    // Delete Account Action
+    // Delete Account
     deleteAccountBtn.addEventListener('click', async () => {
       if (!currentUser) return;
 
-      const confirmDelete = confirm("Are you sure you want to permanently delete your account and leaderboard ranking?");
+      const confirmDelete = confirm("Are you sure you want to delete your account?");
       if (!confirmDelete) return;
 
       try {
-        // Remove from database first
         if (userProfileRef) {
           await remove(userProfileRef);
         }
-        // Delete user authentication
         await deleteUser(currentUser);
       } catch (err) {
-        alert("Delete account error: " + err.message.replace("Firebase: ", ""));
+        alert("Error deleting account: " + err.message.replace("Firebase: ", ""));
       }
     });
 
-    // Log Out User
+    // Log Out
     logoutBtn.addEventListener('click', async () => {
       try {
         await signOut(auth);
@@ -755,7 +731,7 @@
       }
     });
 
-    // Session State Listener
+    // Auth State Controller
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
@@ -770,7 +746,6 @@
 
           hideAuthModal();
           
-          // Active Game Layout
           homeSection.style.display = 'none';
           clickSection.style.display = 'flex';
           headerAuthBtn.style.display = 'none';
@@ -784,7 +759,6 @@
           clickBtn.innerText = localPlayer.clicks;
         }
       } else {
-        // Guest Home Landing Page
         currentUser = null;
         userProfileRef = null;
 
@@ -797,7 +771,7 @@
       }
     });
 
-    // Global Leaderboard Listener
+    // Leaderboard
     onValue(allUsersRef, (snapshot) => {
       const users = snapshot.val() || {};
       
@@ -841,7 +815,7 @@
       }
     });
 
-    // Handle Click
+    // Clicker
     clickBtn.addEventListener('click', () => {
       if (!currentUser || !userProfileRef) return;
 
