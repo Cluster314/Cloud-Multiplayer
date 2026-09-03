@@ -135,7 +135,8 @@
       100% { transform: translate(60px, 40px) scale(1.1); }
     }
 
-    #authOverlay {
+    /* Generic Overlay Styles */
+    .modal-overlay {
       position: fixed;
       top: 0;
       left: 0;
@@ -150,7 +151,7 @@
       padding: 16px;
     }
 
-    .auth-box {
+    .modal-box {
       background: var(--panel-bg);
       border: 1px solid var(--panel-border);
       padding: 32px 24px;
@@ -159,7 +160,7 @@
       flex-direction: column;
       gap: 14px;
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
       box-shadow: 0 20px 50px rgba(0,0,0,0.6);
       backdrop-filter: blur(16px);
       position: relative;
@@ -181,14 +182,14 @@
       justify-content: center;
     }
 
-    .auth-box h2 {
+    .modal-box h2 {
       font-weight: 800;
       letter-spacing: -0.5px;
       text-align: center;
       margin-bottom: 6px;
     }
 
-    .auth-box label {
+    .modal-box label {
       font-size: 0.75rem;
       text-transform: uppercase;
       font-weight: 700;
@@ -196,9 +197,9 @@
       color: var(--subtext-color);
     }
 
-    .auth-box input[type="text"], 
-    .auth-box input[type="email"], 
-    .auth-box input[type="password"] {
+    .modal-box input[type="text"], 
+    .modal-box input[type="email"], 
+    .modal-box input[type="password"] {
       padding: 12px 14px;
       border-radius: 10px;
       border: 1px solid var(--panel-border);
@@ -209,12 +210,12 @@
       transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .auth-box input:focus {
+    .modal-box input:focus {
       border-color: #4CAF50;
       box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
     }
 
-    .auth-box button {
+    .modal-box button {
       min-height: 48px;
       padding: 12px 14px;
       border-radius: 10px;
@@ -229,13 +230,42 @@
       box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
     }
 
-    .auth-box button:active { transform: scale(0.98); }
+    .modal-box button:active { transform: scale(0.98); }
 
-    .auth-box button.sec {
+    .modal-box button.sec {
       background: transparent;
       border: 1px solid var(--panel-border);
       color: var(--text-color);
       box-shadow: none;
+    }
+
+    /* Rules Styles */
+    .rules-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 10px 0;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .rules-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--item-border);
+    }
+
+    .rules-list .rule-num {
+      font-weight: 800;
+      color: #4CAF50;
+      font-size: 0.95rem;
     }
 
     #errorMsg { color: #ff4949; font-size: 0.85rem; text-align: center; min-height: 18px; }
@@ -551,8 +581,43 @@
     <div class="blob blob-2"></div>
   </div>
 
-  <div id="authOverlay" style="display: none;">
-    <div class="auth-box">
+  <!-- Rules Modal -->
+  <div id="rulesOverlay" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <button class="close-modal-btn" id="closeRulesBtn">&times;</button>
+      <h2>Community Rules</h2>
+      <p style="font-size: 0.85rem; color: var(--subtext-color); text-align: center;">Keep the competition fair and fun for everyone!</p>
+      
+      <ul class="rules-list">
+        <li>
+          <span class="rule-num">1</span>
+          <span><strong>No Autoclickers:</strong> Automated scripts, bots, or software clickers are strictly forbidden.</span>
+        </li>
+        <li>
+          <span class="rule-num">2</span>
+          <span><strong>Be Respectful:</strong> Keep usernames appropriate and clean.</span>
+        </li>
+        <li>
+          <span class="rule-num">3</span>
+          <span><strong>One Account Per Player:</strong> Do not create multiple accounts to clog the leaderboard.</span>
+        </li>
+        <li>
+          <span class="rule-num">4</span>
+          <span><strong>Fair Play:</strong> Exploiting bugs or glitches will lead to score resets.</span>
+        </li>
+        <li>
+          <span class="rule-num">5</span>
+          <span><strong>Enjoy!</strong> Have fun and keep tapping your way to the top!</span>
+        </li>
+      </ul>
+
+      <button type="button" id="acceptRulesBtn">I Understand & Agree</button>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="authOverlay" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
       <button class="close-modal-btn" id="closeAuthBtn">&times;</button>
       <div id="errorMsg"></div>
 
@@ -596,6 +661,7 @@
   <header>
     <h1>Multiplayer Clicker</h1>
     <div class="header-controls">
+      <button id="rulesHeaderBtn" class="btn-action">Rules</button>
       <div class="color-picker-wrapper" id="colorPickerContainer" style="display: none;">
         <span>Avatar Color</span>
         <input type="color" id="liveColorPicker" value="#4CAF50" title="Change color anytime" />
@@ -674,6 +740,11 @@
     const standardAuthForm = document.getElementById('standardAuthForm');
     const googleSetupForm = document.getElementById('googleSetupForm');
     
+    const rulesOverlay = document.getElementById('rulesOverlay');
+    const rulesHeaderBtn = document.getElementById('rulesHeaderBtn');
+    const closeRulesBtn = document.getElementById('closeRulesBtn');
+    const acceptRulesBtn = document.getElementById('acceptRulesBtn');
+
     const emailInput = document.getElementById('emailInput');
     const passwordInput = document.getElementById('passwordInput');
     const usernameInput = document.getElementById('usernameInput');
@@ -708,6 +779,18 @@
       authOverlay.style.display = 'none';
       errorMsg.innerText = "";
     }
+
+    function showRulesModal() {
+      rulesOverlay.style.display = 'flex';
+    }
+
+    function hideRulesModal() {
+      rulesOverlay.style.display = 'none';
+    }
+
+    rulesHeaderBtn.addEventListener('click', showRulesModal);
+    closeRulesBtn.addEventListener('click', hideRulesModal);
+    acceptRulesBtn.addEventListener('click', hideRulesModal);
 
     closeAuthBtn.addEventListener('click', hideAuthModal);
     headerAuthBtn.addEventListener('click', showAuthModal);
@@ -759,6 +842,9 @@
           color: initialColor,
           clicks: 0
         });
+
+        hideAuthModal();
+        showRulesModal();
       } catch (err) {
         errorMsg.innerText = err.message.replace("Firebase: ", "");
       }
@@ -820,7 +906,7 @@
 
           pendingGoogleUser = null;
           hideAuthModal();
-          location.reload();
+          showRulesModal();
         }
       } catch (err) {
         errorMsg.innerText = err.message.replace("Firebase: ", "");
