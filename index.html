@@ -99,13 +99,17 @@
       font-size: 0.95rem;
       color: var(--subtext-color);
       max-width: 280px;
+      margin-bottom: 16px;
     }
 
-    /* Show orientation screen in portrait on small devices */
-    @media screen and (max-width: 900px) and (orientation: portrait) {
-      #orientationOverlay {
-        display: flex;
-      }
+    .dismiss-btn {
+      background: transparent;
+      border: 1px solid var(--panel-border);
+      color: var(--subtext-color);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
     }
 
     .ambient-bg {
@@ -573,7 +577,8 @@
   <div id="orientationOverlay">
     <div class="rotate-icon-wrapper"></div>
     <h2>Rotate Your Phone</h2>
-    <p>Please turn your device sideways to landscape mode to play.</p>
+    <p>Please turn your device sideways to landscape mode to play best.</p>
+    <button class="dismiss-btn" id="dismissOrientationBtn">Continue Anyway</button>
   </div>
 
   <div class="ambient-bg">
@@ -727,6 +732,7 @@
     let currentUser = null;
     let userProfileRef = null;
     let pendingGoogleUser = null;
+    let orientationDismissed = false;
     const allUsersRef = ref(database, 'users');
 
     const localPlayer = {
@@ -734,6 +740,30 @@
       clicks: 0,
       name: "Player"
     };
+
+    // JS Orientation Detection Check
+    function checkOrientation() {
+      const overlay = document.getElementById('orientationOverlay');
+      if (orientationDismissed) return;
+
+      const isPortrait = window.innerHeight > window.innerWidth;
+      const isMobileDevice = window.innerWidth <= 900 || window.innerHeight <= 900;
+
+      if (isPortrait && isMobileDevice) {
+        overlay.style.display = 'flex';
+      } else {
+        overlay.style.display = 'none';
+      }
+    }
+
+    document.getElementById('dismissOrientationBtn').addEventListener('click', () => {
+      orientationDismissed = true;
+      document.getElementById('orientationOverlay').style.display = 'none';
+    });
+
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    checkOrientation();
 
     const authOverlay = document.getElementById('authOverlay');
     const closeAuthBtn = document.getElementById('closeAuthBtn');
